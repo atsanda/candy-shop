@@ -7,6 +7,29 @@ class Region(models.Model):
     pass
 
 
+class Hours(models.Model):
+    regex = r'^(2[0-3]|[01]\d):([0-5]\d)-(2[0-3]|[01]\d):([0-5]\d)$'
+    time_format = r'%H:%M'
+
+    starts_at = models.TimeField()
+    finishes_at = models.TimeField()
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def from_string(cls, string):
+        """
+        string: a string with format `HH:MM-HH:MM`,
+                it is assumed that string is validated
+        """
+        starts_at, finishes_at = string.split('-')
+        return cls(starts_at=starts_at, finishes_at=finishes_at)
+
+    def __str__(self):
+        return f"{self.starts_at:%H:%M}-{self.finishes_at:%H:%M}"
+
+
 class Courier(models.Model):
     courier_id = models.BigAutoField(primary_key=True)
 
@@ -31,6 +54,9 @@ class WorkingHoursQuerySet(QuerySet):
 
 
 class WorkingHours(models.Model):
+    """
+    !TODO nest from Hours
+    """
     objects = WorkingHoursQuerySet.as_manager()
 
     regex = r'^(2[0-3]|[01]\d):([0-5]\d)-(2[0-3]|[01]\d):([0-5]\d)$'
@@ -54,3 +80,22 @@ class WorkingHours(models.Model):
 
     def __str__(self):
         return f"{self.starts_at:%H:%M}-{self.finishes_at:%H:%M}"
+
+
+class Order(models.Model):
+    order_id = models.BigAutoField(primary_key=True)
+    weight = models.FloatField()
+    region = models.ForeignKey(Region, on_delete=models.PROTECT)
+
+
+class DeliveryHours(Hours):
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='delivery_hours')
+
+    @classmethod
+    def from_string(cls, string, order=None):
+        instance = super().from_string(string)
+        instance.order = order
+        return instance
