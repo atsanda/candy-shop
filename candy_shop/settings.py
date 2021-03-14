@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'candy_shop.apps.delivery'
+    'rest_framework',
+    'candy_shop.apps.delivery',
 ]
 
 MIDDLEWARE = [

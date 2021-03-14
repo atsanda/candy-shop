@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Courier, Region, WorkingHours
 from .validators import RegexValidator
+from django.db.models.manager import Manager
+import logging
 
 
 class WorkingHoursField(serializers.StringRelatedField):
@@ -8,25 +10,32 @@ class WorkingHoursField(serializers.StringRelatedField):
         return data
 
 
-class RegionsField(serializers.PrimaryKeyRelatedField):
-    # This is needed to stub queryset and avoid assertion inside __init__
-    queryset = object()
+class RegionsField(serializers.ListField):
+    def __init__(self):
+        super().__init__(child=serializers.IntegerField())
+
+    def to_representation(self, value):
+        # to options here 
+        if isinstance(value, list):  # on validation error in another filed
+            return value
+        elif isinstance(value, Manager):  # on usual
+            return [int(v.pk) for v in value.all()]
+        else:
+            raise serializers.ValidationError()
 
     def to_internal_value(self, data):
-        if self.pk_field is not None:
-            data = self.pk_field.to_internal_value(data)
-        return data
+        return super().to_internal_value(data)
 
 
 class CourierSerializer(serializers.ModelSerializer):
     working_hours = WorkingHoursField(
         many=True, validators=[RegexValidator(WorkingHours.regex)])
-    regions = RegionsField(many=True)
+    regions = RegionsField()
     courier_id = serializers.IntegerField()
 
     class Meta:
         model = Courier
-        fields = ['courier_id', 'curier_type', 'regions', 'working_hours']
+        fields = ['courier_id', 'courier_type', 'regions', 'working_hours']
 
     def create(self, validated_data):
         regions = validated_data.pop('regions')
@@ -43,3 +52,10 @@ class CourierSerializer(serializers.ModelSerializer):
             working_hours.save()
 
         return courier
+
+    def run_validation(self, initial_data):
+        try:
+            return super().run_validation(initial_data)
+        except serializers.ValidationError as e:
+            logging.error(e, exc_info=True)
+            raise serializers.ValidationError({'id': initial_data.get('courier_id', None)})

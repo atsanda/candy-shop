@@ -13,7 +13,7 @@ class Courier(models.Model):
         BIKE = "bike"
         CAR = "car"
 
-    curier_type = models.CharField(
+    courier_type = models.CharField(
       max_length=5,
       choices=CourierType.choices
     )
