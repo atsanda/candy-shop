@@ -1,11 +1,11 @@
 from rest_framework import serializers
-from .models import Courier, Region, WorkingHours
+from .models import Courier, Region, WorkingHours, DeliveryHours, Order
 from .validators import RegexValidator
 from django.db.models.manager import Manager
 import logging
 
 
-class WorkingHoursField(serializers.StringRelatedField):
+class HoursField(serializers.StringRelatedField):
     def to_internal_value(self, data):
         return data
 
@@ -27,8 +27,24 @@ class RegionsField(serializers.ListField):
         return super().to_internal_value(data)
 
 
-class CourierSerializer(serializers.ModelSerializer):
-    working_hours = WorkingHoursField(
+class DeliveryModelSerializer(serializers.ModelSerializer):
+    def validate(self, data):
+        if hasattr(self, 'initial_data'):
+            unknown_keys = set(self.initial_data.keys()) - set(self.fields.keys())
+            if unknown_keys:
+                raise serializers.ValidationError("Got unknown fields: {}".format(unknown_keys))
+        return data
+
+    def run_validation(self, initial_data, id_field):
+        try:
+            return super().run_validation(initial_data)
+        except serializers.ValidationError as e:
+            logging.error(e, exc_info=True)
+            raise serializers.ValidationError({'id': initial_data.get(id_field, None)})
+
+
+class CourierSerializer(DeliveryModelSerializer):
+    working_hours = HoursField(
         many=True, validators=[RegexValidator(WorkingHours.regex)])
     regions = RegionsField()
     courier_id = serializers.IntegerField()
@@ -46,7 +62,8 @@ class CourierSerializer(serializers.ModelSerializer):
         courier.save()
         courier.regions.add(*regions)
 
-        WorkingHours.objects.bulk_create_from_str(validated_data['working_hours'], courier)
+        # !TODO revise this
+        WorkingHours.objects.bulk_create_from_str(working_hours, courier)
 
         return courier
 
@@ -62,23 +79,38 @@ class CourierSerializer(serializers.ModelSerializer):
 
         if 'working_hours' in validated_data:
             instance.working_hours.all().delete()
+            # !TODO revise this
             WorkingHours.objects.bulk_create_from_str(validated_data['working_hours'], instance)
 
         #!TODO orders logic
 
         return instance
 
-    def validate(self, data):
-        if hasattr(self, 'initial_data'):
-            unknown_keys = set(self.initial_data.keys()) - set(self.fields.keys())
-            if unknown_keys:
-                raise serializers.ValidationError("Got unknown fields: {}".format(unknown_keys))
-        return data
+    def run_validation(self, initial_data):
+        return super().run_validation(initial_data, 'courier_id')
 
+
+class OrderSerializer(serializers.ModelSerializer):
+    delivery_hours = HoursField(
+        many=True, validators=[RegexValidator(WorkingHours.regex)])
+    order_id = serializers.IntegerField()
+    weight = serializers.DecimalField(
+        max_digits=Order._meta.get_field('weight').max_digits,
+        decimal_places=Order._meta.get_field('weight').decimal_places,
+        min_value=0.01, max_value=50)
+
+    class Meta:
+        model = Order
+        fields = ['order_id', 'weight', 'region', 'delivery_hours']
+
+    def create(self, validated_data):
+        delivery_hours = validated_data.pop('delivery_hours')
+        order = Order(**validated_data)
+        order.save()
+        DeliveryHours.objects.bulk_create(
+            [DeliveryHours.from_string(s, order=order) for s in delivery_hours]
+        )
+        return order
 
     def run_validation(self, initial_data):
-        try:
-            return super().run_validation(initial_data)
-        except serializers.ValidationError as e:
-            logging.error(e, exc_info=True)
-            raise serializers.ValidationError({'id': initial_data.get('courier_id', None)})
+        return super().run_validation(initial_data, 'order_id')

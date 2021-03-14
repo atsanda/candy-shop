@@ -84,7 +84,7 @@ class WorkingHours(models.Model):
 
 class Order(models.Model):
     order_id = models.BigAutoField(primary_key=True)
-    weight = models.FloatField()
+    weight = models.DecimalField(max_digits=4, decimal_places=2)
     region = models.ForeignKey(Region, on_delete=models.PROTECT)
 
 
