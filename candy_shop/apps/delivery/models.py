@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.db.models import QuerySet
 from typing import List
@@ -83,6 +85,9 @@ class WorkingHours(models.Model):
 
 
 class Order(models.Model):
+    MIN_WEIGHT = Decimal('0.01')
+    MAX_WEIGHT = Decimal('50')
+
     order_id = models.BigAutoField(primary_key=True)
     weight = models.DecimalField(max_digits=4, decimal_places=2)
     region = models.ForeignKey(Region, on_delete=models.PROTECT)

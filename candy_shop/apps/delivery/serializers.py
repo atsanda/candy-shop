@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Courier, Region, WorkingHours, DeliveryHours, Order
-from .validators import RegexValidator
+from .validators import RegexValidator, IntervalValidator
 from django.db.models.manager import Manager
 import logging
 
@@ -28,9 +28,17 @@ class RegionsField(serializers.ListField):
 
 
 class DeliveryModelSerializer(serializers.ModelSerializer):
+    def get_initial_data_keys(self):
+        if isinstance(self.initial_data, dict):
+            return self.initial_data.keys()
+        elif isinstance(self.initial_data, list) and isinstance(self.initial_data[0], dict):
+            return self.initial_data[0].keys()
+        else:
+            raise serializers.ValidationError("Invalid data passed")
+
     def validate(self, data):
         if hasattr(self, 'initial_data'):
-            unknown_keys = set(self.initial_data.keys()) - set(self.fields.keys())
+            unknown_keys = set(self.get_initial_data_keys()) - set(self.fields.keys())
             if unknown_keys:
                 raise serializers.ValidationError("Got unknown fields: {}".format(unknown_keys))
         return data
@@ -90,14 +98,14 @@ class CourierSerializer(DeliveryModelSerializer):
         return super().run_validation(initial_data, 'courier_id')
 
 
-class OrderSerializer(serializers.ModelSerializer):
+class OrderSerializer(DeliveryModelSerializer):
     delivery_hours = HoursField(
         many=True, validators=[RegexValidator(WorkingHours.regex)])
     order_id = serializers.IntegerField()
     weight = serializers.DecimalField(
         max_digits=Order._meta.get_field('weight').max_digits,
         decimal_places=Order._meta.get_field('weight').decimal_places,
-        min_value=0.01, max_value=50)
+        validators=[IntervalValidator(left=Order.MIN_WEIGHT, right=Order.MAX_WEIGHT)])
 
     class Meta:
         model = Order
