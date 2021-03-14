@@ -46,12 +46,35 @@ class CourierSerializer(serializers.ModelSerializer):
         courier.save()
         courier.regions.add(*regions)
 
-        for h in working_hours:
-            working_hours = WorkingHours.from_string(h)
-            working_hours.courier = courier
-            working_hours.save()
+        WorkingHours.objects.bulk_create_from_str(validated_data['working_hours'], courier)
 
         return courier
+
+    def update(self, instance, validated_data):
+        instance.courier_type = validated_data.get('courier_type', instance.courier_type)
+        instance.save()
+
+        if 'regions' in validated_data:
+            instance.regions.clear()
+            instance.regions.add(
+                *[Region.objects.get_or_create(pk=r)[0] for r in validated_data['regions']])
+            #!TODO regions cleanup
+
+        if 'working_hours' in validated_data:
+            instance.working_hours.all().delete()
+            WorkingHours.objects.bulk_create_from_str(validated_data['working_hours'], instance)
+
+        #!TODO orders logic
+
+        return instance
+
+    def validate(self, data):
+        if hasattr(self, 'initial_data'):
+            unknown_keys = set(self.initial_data.keys()) - set(self.fields.keys())
+            if unknown_keys:
+                raise serializers.ValidationError("Got unknown fields: {}".format(unknown_keys))
+        return data
+
 
     def run_validation(self, initial_data):
         try:
