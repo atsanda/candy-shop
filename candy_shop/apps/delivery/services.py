@@ -1,7 +1,7 @@
 from django.core.paginator import Paginator
 from django.db import transaction
 from .models import Order, Courier
-from django.db.models import Sum
+from django.db.models import Sum, Q
 
 
 @transaction.atomic
@@ -11,7 +11,14 @@ def assign_orders(courier):
     selected_orders = []
     paginator = Paginator(available_orders, per_page=5)  # chunk size can be different
 
-    current_weight = Courier.objects.filter(pk=courier.pk).aggregate(Sum('orders__weight'))['orders__weight__sum']
+    #!TODO Move to queryset manager
+    current_weight = (
+        Courier.objects
+        .filter(pk=courier.pk)
+        .filter(orders__status=Order.OrderStatus.OPEN)
+        .aggregate(
+            Sum('orders__weight')
+        )['orders__weight__sum'])
     weight_capacity = courier.courier_type - (current_weight or 0)
     if weight_capacity < 0:
         raise ValueError("Weight capacity for the courier is negative!")
