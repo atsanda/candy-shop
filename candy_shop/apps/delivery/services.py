@@ -15,7 +15,7 @@ def assign_orders(courier):
     current_weight = (
         Courier.objects
         .filter(pk=courier.pk)
-        .filter(orders__status=Order.OrderStatus.OPEN)
+        .filter(orders__status=Order.OrderStatus.ASSIGNED)
         .aggregate(
             Sum('orders__weight')
         )['orders__weight__sum'])
@@ -40,3 +40,10 @@ def assign_orders(courier):
             break
     Order.objects.bulk_update(selected_orders, ['courier', 'status'])
     return selected_orders
+
+
+def complete_order(courier: Courier, order: Order):
+    order.status = Order.OrderStatus.COMPLETE
+    order.courier = None
+    order.save()
+    return order

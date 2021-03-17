@@ -151,3 +151,13 @@ class AssignSerializer(serializers.Serializer):
     courier_id = serializers.PrimaryKeyRelatedField(
         queryset=Courier.objects.all().prefetch_related('regions', 'working_hours')
     )
+
+
+class CompleteOrderSerializer(serializers.Serializer):
+    courier_id = serializers.PrimaryKeyRelatedField(queryset=Courier.objects.all())
+    order_id = serializers.PrimaryKeyRelatedField(queryset=Order.objects.all())
+
+    def validate(self, data):
+        if data['order_id'].courier.pk != data['courier_id'].pk:
+            raise serializers.ValidationError("The Order doesn't belong to the courier")
+        return data

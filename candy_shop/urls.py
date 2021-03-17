@@ -16,7 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
-from .apps.delivery.views import CourierViewSet, OrderViewSet, AssignView
+from .apps.delivery.views import CourierViewSet, OrderViewSet, AssignView, CompleteOrderView
 
 
 router = routers.DefaultRouter()
@@ -27,5 +27,6 @@ router.register(r'orders', OrderViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('orders/assign', AssignView.as_view()),
+    path('orders/complete', CompleteOrderView.as_view()),
     path('admin/', admin.site.urls),
 ]

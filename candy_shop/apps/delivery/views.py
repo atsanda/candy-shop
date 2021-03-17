@@ -2,8 +2,8 @@ from rest_framework import viewsets, status, mixins
 from rest_framework.response import Response
 from .models import Courier, Order
 from rest_framework.generics import GenericAPIView
-from .serializers import CourierSerializer, OrderSerializer, AssignSerializer
-from .services import assign_orders
+from .serializers import CourierSerializer, OrderSerializer, AssignSerializer, CompleteOrderSerializer
+from .services import assign_orders, complete_order
 
 
 class DeliveryCreateMixin(mixins.CreateModelMixin):
@@ -59,4 +59,18 @@ class AssignView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         assigned_orders = assign_orders(serializer.validated_data['courier_id'])
         response_data = {'orders': [{'id': o.pk} for o in assigned_orders]}
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class CompleteOrderView(GenericAPIView):
+    serializer_class = CompleteOrderSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        order = complete_order(
+            serializer.validated_data['courier_id'],
+            serializer.validated_data['order_id'])
+        response_data = {'order_id': order.pk}
         return Response(response_data, status=status.HTTP_200_OK)
