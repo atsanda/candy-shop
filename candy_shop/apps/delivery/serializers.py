@@ -5,6 +5,28 @@ from django.db.models.manager import Manager
 import logging
 
 
+class ChoiceField(serializers.ChoiceField):
+    """
+    Doesn't work correctly in case of IntegerChoice
+    Had to override
+    Taken from https://stackoverflow.com/questions/28945327/django-rest-framework-with-choicefield
+    """
+    def to_representation(self, obj):
+        if obj == '' and self.allow_blank:
+            return obj
+        return self._choices[obj]
+
+    def to_internal_value(self, data):
+        # To support inserts with the value
+        if data == '' and self.allow_blank:
+            return ''
+
+        for key, val in self._choices.items():
+            if val == data:
+                return key
+        self.fail('invalid_choice', input=data)
+
+
 class HoursField(serializers.StringRelatedField):
     def to_internal_value(self, data):
         return data
@@ -56,6 +78,7 @@ class CourierSerializer(DeliveryModelSerializer):
         many=True, validators=[RegexValidator(WorkingHours.regex)])
     regions = RegionsField()
     courier_id = serializers.IntegerField()
+    courier_type = ChoiceField(Courier.CourierType.choices)
 
     class Meta:
         model = Courier
@@ -122,3 +145,9 @@ class OrderSerializer(DeliveryModelSerializer):
 
     def run_validation(self, initial_data):
         return super().run_validation(initial_data, 'order_id')
+
+
+class AssignSerializer(serializers.Serializer):
+    courier_id = serializers.PrimaryKeyRelatedField(
+        queryset=Courier.objects.all().prefetch_related('regions', 'working_hours')
+    )
