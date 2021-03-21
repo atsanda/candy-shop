@@ -157,7 +157,12 @@ class CompleteOrderSerializer(serializers.Serializer):
     courier_id = serializers.PrimaryKeyRelatedField(queryset=Courier.objects.all())
     order_id = serializers.PrimaryKeyRelatedField(queryset=Order.objects.all())
 
+    def validate_order_id(self, value):
+        if value.status != Order.OrderStatus.ASSIGNED:
+            raise serializers.ValidationError("Order has invalid status")
+        return value
+
     def validate(self, data):
-        if data['order_id'].courier.pk != data['courier_id'].pk:
+        if data['order_id'].courier is None or data['order_id'].courier.pk != data['courier_id'].pk:
             raise serializers.ValidationError("The Order doesn't belong to the courier")
         return data

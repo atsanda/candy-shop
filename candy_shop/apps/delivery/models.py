@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import QuerySet, Q
+from django.db.models import QuerySet, Q, Avg, Min
 from typing import List
 
 
@@ -42,6 +42,21 @@ class Courier(models.Model):
 
     courier_type = models.IntegerField(choices=CourierType.choices)
     regions = models.ManyToManyField(Region)
+
+    @property
+    def rating(self):
+        q_res = (
+            self.orders.all()
+            .values('region')
+            .annotate(Avg('delivery_time'))
+            .aggregate(Min('delivery_time__avg'))
+        )
+        min_avg_delivery_time = q_res['delivery_time__avg__min']
+        if min_avg_delivery_time is None:
+            return None
+
+        rating = 5 * (60*60 - min(min_avg_delivery_time.total_seconds(), 60*60)) / (60*60)
+        return rating
 
 
 class WorkingHoursQuerySet(QuerySet):
@@ -90,6 +105,7 @@ class OrderQuerySet(QuerySet):
                 Q(delivery_hours__starts_at__lt=wh.finishes_at) & 
                 Q(delivery_hours__finishes_at__gt=wh.starts_at))
         qs = qs.distinct()
+        # !TODO check that it goes from bigger to lower
         qs = qs.order_by('weight')
         return qs
 
@@ -110,6 +126,10 @@ class Order(models.Model):
     region = models.ForeignKey(Region, on_delete=models.PROTECT)
     courier = models.ForeignKey(Courier, on_delete=models.PROTECT, related_name='orders', blank=True, null=True)
     status = models.CharField(max_length=10, choices=OrderStatus.choices, default=OrderStatus.OPEN)
+    open_time = models.DateTimeField(auto_now=True)
+    assigned_time = models.DateTimeField(blank=True, null=True)
+    complete_time = models.DateTimeField(blank=True, null=True)
+    delivery_time = models.DurationField(blank=True, null=True)
 
 
 class DeliveryHours(Hours):
