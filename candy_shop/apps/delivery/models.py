@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import QuerySet, Q, Avg, Min
+from django.db.models import QuerySet, Q, Avg, Min, Count, Case, When, F
 from typing import List
 
 
@@ -40,6 +40,13 @@ class Courier(models.Model):
         BIKE = 15, 'bike'
         CAR = 50, 'car'
 
+        def get_earnings_coef(self):
+            return {
+                'foot': 2,
+                'bike': 5,
+                'car': 9,
+                }[self.label]
+
     courier_type = models.IntegerField(choices=CourierType.choices)
     regions = models.ManyToManyField(Region)
 
@@ -57,6 +64,25 @@ class Courier(models.Model):
 
         rating = 5 * (60*60 - min(min_avg_delivery_time.total_seconds(), 60*60)) / (60*60)
         return rating
+
+    @property
+    def earnings(self):
+        q_res = (
+            self.orders.all()
+            .values('assigned_time')
+            .annotate(
+                cnt_assigned_orders=Count('*'),
+                cnt_completed_orders=Count(
+                    Case(
+                        When(status=Order.OrderStatus.COMPLETE, then=F('status'))
+                    ))
+                )
+            .filter(cnt_assigned_orders=F('cnt_completed_orders'))
+            .aggregate(n_deliviries_complete=Count('assigned_time', distinct=True))
+        )
+        n_deliviries_complete = q_res.get('n_deliviries_complete', 0)
+        C = Courier.CourierType(self.courier_type).get_earnings_coef()
+        return n_deliviries_complete * 500 * C
 
 
 class WorkingHoursQuerySet(QuerySet):
