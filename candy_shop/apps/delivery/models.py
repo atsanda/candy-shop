@@ -63,7 +63,7 @@ class Courier(models.Model):
             return None
 
         rating = 5 * (60*60 - min(min_avg_delivery_time.total_seconds(), 60*60)) / (60*60)
-        return rating
+        return round(rating, 2)
 
     @property
     def earnings(self):

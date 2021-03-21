@@ -166,3 +166,12 @@ class CompleteOrderSerializer(serializers.Serializer):
         if data['order_id'].courier is None or data['order_id'].courier.pk != data['courier_id'].pk:
             raise serializers.ValidationError("The Order doesn't belong to the courier")
         return data
+
+
+class CourierDetailsSerializer(CourierSerializer):
+    rating = serializers.FloatField()
+    earnings = serializers.IntegerField()
+
+    class Meta:
+        model = Courier
+        fields = ['courier_id', 'courier_type', 'regions', 'working_hours', 'rating', 'earnings']

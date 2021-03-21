@@ -2,7 +2,7 @@ from rest_framework import viewsets, status, mixins
 from rest_framework.response import Response
 from .models import Courier, Order
 from rest_framework.generics import GenericAPIView
-from .serializers import CourierSerializer, OrderSerializer, AssignSerializer, CompleteOrderSerializer
+from .serializers import CourierSerializer, OrderSerializer, AssignSerializer, CompleteOrderSerializer, CourierDetailsSerializer
 from .services import assign_orders, complete_order
 
 
@@ -34,10 +34,13 @@ class CourierViewSet(DeliveryCreateMixin,
                      mixins.ListModelMixin,
                      viewsets.GenericViewSet):
     queryset = Courier.objects.all()
-    serializer_class = CourierSerializer
     entity_name = 'couriers'
     entity_id_field = 'courier_id'
 
+    def get_serializer_class(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            return CourierDetailsSerializer
+        return CourierSerializer
 
 class OrderViewSet(DeliveryCreateMixin,
                    mixins.RetrieveModelMixin,
