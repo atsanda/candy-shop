@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.db import models
-from django.db.models import QuerySet, Q, Avg, Min, Count, Case, When, F
+from django.db.models import QuerySet, Q, Avg, Min, Count, Case, When, F, Sum
 from typing import List
 
 
@@ -84,6 +84,18 @@ class Courier(models.Model):
         C = Courier.CourierType(self.courier_type).get_earnings_coef()
         return n_deliviries_complete * 500 * C
 
+    def get_orders_weight(self):
+        return (
+            self.orders.all()
+            .filter(status=Order.OrderStatus.ASSIGNED)
+            .aggregate(weight__sum=Sum('weight')
+        )['weight__sum'])
+
+    def get_weight_balance(self):
+        current_weight = self.get_orders_weight()
+        weight_capacity = self.courier_type - (current_weight or 0)
+        return weight_capacity
+
 
 class WorkingHoursQuerySet(QuerySet):
     def bulk_create_from_str(self, working_hours_strs: List[str], courier: Courier):
@@ -122,17 +134,15 @@ class WorkingHours(models.Model):
 
 
 class OrderQuerySet(QuerySet):
-    def get_available_orders(self, courier: Courier):
+    def get_available_orders(self, courier: Courier, required_status: str = 'open'):
         qs = (self.filter(region__in=courier.regions.all())
                 .filter(weight__lte=courier.courier_type)
-                .filter(status=Order.OrderStatus.OPEN))
+                .filter(status=required_status))
         for wh in courier.working_hours.all():
             qs = qs.filter(
                 Q(delivery_hours__starts_at__lt=wh.finishes_at) & 
                 Q(delivery_hours__finishes_at__gt=wh.starts_at))
         qs = qs.distinct()
-        # !TODO check that it goes from bigger to lower
-        qs = qs.order_by('weight')
         return qs
 
 
@@ -156,6 +166,12 @@ class Order(models.Model):
     assigned_time = models.DateTimeField(blank=True, null=True)
     complete_time = models.DateTimeField(blank=True, null=True)
     delivery_time = models.DurationField(blank=True, null=True)
+
+    def return_to_open(self):
+        self.status = self.OrderStatus.OPEN
+        self.assigned_time = None
+        self.courier = None
+        self.save()
 
 
 class DeliveryHours(Hours):

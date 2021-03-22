@@ -113,7 +113,17 @@ class CourierSerializer(DeliveryModelSerializer):
             # !TODO revise this
             WorkingHours.objects.bulk_create_from_str(validated_data['working_hours'], instance)
 
-        #!TODO orders logic
+        instance.save()
+        available_orders = list(
+            instance.orders.all()
+            .get_available_orders(instance, required_status=Order.OrderStatus.ASSIGNED)
+            .order_by('weight')
+        )
+        weight_balance = instance.get_weight_balance()
+        while weight_balance < 0:
+            order = available_orders.pop(0)
+            order.return_to_open()
+            weight_balance += order.weight
 
         return instance
 

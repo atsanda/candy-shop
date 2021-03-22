@@ -7,20 +7,12 @@ from django.db.models import Sum, Q, Max
 
 @transaction.atomic
 def assign_orders(courier):
-    available_orders = Order.objects.get_available_orders(courier)
+    available_orders = Order.objects.get_available_orders(courier).order_by('-weight')
 
     selected_orders = []
     paginator = Paginator(available_orders, per_page=5)  # chunk size can be different
 
-    #!TODO Move to queryset manager
-    current_weight = (
-        Courier.objects
-        .filter(pk=courier.pk)
-        .filter(orders__status=Order.OrderStatus.ASSIGNED)
-        .aggregate(
-            Sum('orders__weight')
-        )['orders__weight__sum'])
-    weight_capacity = courier.courier_type - (current_weight or 0)
+    weight_capacity = courier.get_weight_balance()
     if weight_capacity < 0:
         raise ValueError("Weight capacity for the courier is negative!")
 
@@ -56,7 +48,6 @@ def complete_order(courier: Courier, order: Order):
         .aggregate(Max('orders__complete_time'))
     )['orders__complete_time__max']
     last_complete_time = last_complete_time or order.assigned_time
-    print(last_complete_time)
     order.delivery_time = order.complete_time - last_complete_time
     order.save()
     return order
