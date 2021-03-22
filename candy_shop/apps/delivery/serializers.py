@@ -34,7 +34,7 @@ class HoursField(serializers.StringRelatedField):
 
 class RegionsField(serializers.ListField):
     def __init__(self):
-        super().__init__(child=serializers.IntegerField())
+        super().__init__(child=serializers.IntegerField(min_value=1))
 
     def to_representation(self, value):
         # to options here 
@@ -47,6 +47,9 @@ class RegionsField(serializers.ListField):
 
     def to_internal_value(self, data):
         return super().to_internal_value(data)
+
+    def run_validation(self, initial_data):
+        return super().run_validation(initial_data)
 
 
 class DeliveryModelSerializer(serializers.ModelSerializer):
@@ -116,11 +119,13 @@ class CourierSerializer(DeliveryModelSerializer):
         instance.save()
         available_orders = list(
             instance.orders.all()
-            .get_available_orders(instance, required_status=Order.OrderStatus.ASSIGNED)
+            .get_available_orders(instance,
+                                  required_status=Order.OrderStatus.ASSIGNED,
+                                  apply_weight_filter=False)
             .order_by('weight')
         )
         weight_balance = instance.get_weight_balance()
-        while weight_balance < 0:
+        while available_orders and weight_balance < 0:
             order = available_orders.pop(0)
             order.return_to_open()
             weight_balance += order.weight
@@ -131,6 +136,14 @@ class CourierSerializer(DeliveryModelSerializer):
         return super().run_validation(initial_data, 'courier_id')
 
 
+class SingleRegionField(serializers.IntegerField):
+    def __init__(self):
+        super().__init__(min_value=1)
+
+    def to_representation(self, value):
+        return int(value.pk)
+
+
 class OrderSerializer(DeliveryModelSerializer):
     delivery_hours = HoursField(
         many=True, validators=[RegexValidator(WorkingHours.regex)])
@@ -139,6 +152,7 @@ class OrderSerializer(DeliveryModelSerializer):
         max_digits=Order._meta.get_field('weight').max_digits,
         decimal_places=Order._meta.get_field('weight').decimal_places,
         validators=[IntervalValidator(left=Order.MIN_WEIGHT, right=Order.MAX_WEIGHT)])
+    region = SingleRegionField()
 
     class Meta:
         model = Order
@@ -146,7 +160,8 @@ class OrderSerializer(DeliveryModelSerializer):
 
     def create(self, validated_data):
         delivery_hours = validated_data.pop('delivery_hours')
-        order = Order(**validated_data)
+        region = Region.objects.get_or_create(pk=validated_data.pop('region'))[0]
+        order = Order(region=region, **validated_data)
         order.save()
         DeliveryHours.objects.bulk_create(
             [DeliveryHours.from_string(s, order=order) for s in delivery_hours]

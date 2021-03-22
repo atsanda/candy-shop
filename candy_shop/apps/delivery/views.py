@@ -42,6 +42,7 @@ class CourierViewSet(DeliveryCreateMixin,
             return CourierDetailsSerializer
         return CourierSerializer
 
+
 class OrderViewSet(DeliveryCreateMixin,
                    mixins.RetrieveModelMixin,
                    mixins.UpdateModelMixin,

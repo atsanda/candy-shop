@@ -134,14 +134,22 @@ class WorkingHours(models.Model):
 
 
 class OrderQuerySet(QuerySet):
-    def get_available_orders(self, courier: Courier, required_status: str = 'open'):
-        qs = (self.filter(region__in=courier.regions.all())
-                .filter(weight__lte=courier.courier_type)
-                .filter(status=required_status))
+    def get_available_orders(self,
+                             courier: Courier,
+                             required_status: str = 'open',
+                             apply_weight_filter: bool = True):
+        qs = self.filter(region__in=courier.regions.all())
+        qs = qs.filter(status=required_status)
+        if apply_weight_filter:
+            qs = qs.filter(weight__lte=courier.courier_type)
+        filter_wh = None
         for wh in courier.working_hours.all():
-            qs = qs.filter(
+            q = Q(
                 Q(delivery_hours__starts_at__lt=wh.finishes_at) & 
-                Q(delivery_hours__finishes_at__gt=wh.starts_at))
+                Q(delivery_hours__finishes_at__gt=wh.starts_at)
+            )
+            filter_wh = filter_wh | q if filter_wh is not None else q
+        qs = qs.filter(filter_wh)
         qs = qs.distinct()
         return qs
 
