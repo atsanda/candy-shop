@@ -1,0 +1,1 @@
+[![codecov](https://codecov.io/gh/atsanda/candy-shop/branch/main/graph/badge.svg?token=YYQ675YF3V)](https://codecov.io/gh/atsanda/candy-shop)
