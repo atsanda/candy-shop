@@ -20,9 +20,11 @@ class IntervalValidator:
         self.inclusive_right = inclusive_right
 
     def __call__(self, value):
-        if (value < self.left or
+        if (
+            value < self.left or
             (not self.inclusive_left and value == self.left) or
             value > self.right or
-            (not self.inclusive_right and value == self.right)):
+            (not self.inclusive_right and value == self.right)
+        ):
             message = f"Value {value} is out of allowed interval"
             raise serializers.ValidationError(message)

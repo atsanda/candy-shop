@@ -2,7 +2,8 @@ from rest_framework import viewsets, status, mixins
 from rest_framework.response import Response
 from .models import Courier, Order
 from rest_framework.generics import GenericAPIView
-from .serializers import CourierSerializer, OrderSerializer, AssignSerializer, CompleteOrderSerializer, CourierDetailsSerializer
+from .serializers import (CourierSerializer, OrderSerializer, AssignSerializer,
+                          CompleteOrderSerializer, CourierDetailsSerializer)
 from .services import assign_orders, complete_order
 
 
@@ -23,14 +24,19 @@ class DeliveryCreateMixin(mixins.CreateModelMixin):
 
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
-        response_data = {self.entity_name: [{'id': d[self.entity_id_field]} for d in serializer.data]}
-        return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
+        response_data = {
+            self.entity_name: [
+                {'id': d[self.entity_id_field]} for d in serializer.data
+            ]
+        }
+        return Response(response_data,
+                        status=status.HTTP_201_CREATED,
+                        headers=headers)
 
 
 class CourierViewSet(DeliveryCreateMixin,
                      mixins.RetrieveModelMixin,
                      mixins.UpdateModelMixin,
-                     mixins.DestroyModelMixin,
                      mixins.ListModelMixin,
                      viewsets.GenericViewSet):
     queryset = Courier.objects.all()
@@ -45,8 +51,6 @@ class CourierViewSet(DeliveryCreateMixin,
 
 class OrderViewSet(DeliveryCreateMixin,
                    mixins.RetrieveModelMixin,
-                   mixins.UpdateModelMixin,
-                   mixins.DestroyModelMixin,
                    mixins.ListModelMixin,
                    viewsets.GenericViewSet):
     queryset = Order.objects.all()
@@ -61,7 +65,8 @@ class AssignView(GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        assigned_orders = assign_orders(serializer.validated_data['courier_id'])
+        assigned_orders = assign_orders(
+            serializer.validated_data['courier_id'])
         response_data = {'orders': [{'id': o.pk} for o in assigned_orders]}
         return Response(response_data, status=status.HTTP_200_OK)
 
