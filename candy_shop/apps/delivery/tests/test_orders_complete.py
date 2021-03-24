@@ -1,6 +1,7 @@
 import pytest
 import json
 from rest_framework import status
+from candy_shop.apps.delivery.models import Order
 
 
 @pytest.fixture
@@ -77,3 +78,30 @@ def test_invalid_complete(simple_setup, client):
         json.dumps(complete),
         content_type="application/json")
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.django_db
+@pytest.mark.integration
+def test_complete_twice(simple_setup, client):
+    complete = {
+        "courier_id": 1,
+        "order_id": 1,
+    }
+    response = client.post(
+        '/orders/complete',
+        json.dumps(complete),
+        content_type="application/json")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data['order_id'] == 1
+
+    complete_time = Order.objects.get(pk=1).complete_time
+
+    response = client.post(
+        '/orders/complete',
+        json.dumps(complete),
+        content_type="application/json")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data['order_id'] == 1
+
+    assert Order.objects.get(pk=1).complete_time == complete_time
+
