@@ -44,6 +44,9 @@ def assign_orders(courier):
 
 
 def complete_order(courier: Courier, order: Order):
+    if order.status == Order.OrderStatus.COMPLETE:
+        return order
+
     order.status = Order.OrderStatus.COMPLETE
     order.complete_time = timezone.now()
 

@@ -147,7 +147,8 @@ class CompleteOrderSerializer(serializers.Serializer):
     order_id = serializers.PrimaryKeyRelatedField(queryset=Order.objects.all())
 
     def validate_order_id(self, value):
-        if value.status != Order.OrderStatus.ASSIGNED:
+        if not (value.status in [Order.OrderStatus.ASSIGNED,
+                                 Order.OrderStatus.COMPLETE]):
             raise serializers.ValidationError("Order has invalid status")
         return value
 
