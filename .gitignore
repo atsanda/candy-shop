@@ -1,4 +1,6 @@
 # Created by https://www.gitignore.io
+bin
+gunicorn_config.py
 
 ### OSX ###
 .DS_Store
