@@ -18,7 +18,7 @@ The app implements several apis:
 There are several core files for processing each of them:
 * a request is recieved inside [views](candy_shop/apps/delivery/views.py),
 * then deserialized and validated inside [serializers](candy_shop/apps/delivery/serializers.py), 
-* business logic is applied from [services],(candy_shop/apps/delivery/services.py)
+* business logic is applied from [services](candy_shop/apps/delivery/services.py),
 * comlex queries are added moved to [models](candy_shop/apps/delivery/models.py).
 
 ## Installation
