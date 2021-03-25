@@ -47,8 +47,7 @@ jobs:
     - name: Run migrations
       run: python manage.py migrate
     - name: Run Tests
-      run: |
-        pytest -x --cov=./expenshare --cov-report=xml
+      run: pytest
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:

@@ -5,9 +5,12 @@ For more information on this file, see
 https://docs.djangoproject.com/en/2.0/howto/deployment/wsgi/gunicorn/
 """
 import os
+import dotenv
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "candy_shop.config")
 os.environ.setdefault("DJANGO_CONFIGURATION", "Production")
+
+dotenv.read_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 from configurations.wsgi import get_wsgi_application
 application = get_wsgi_application()

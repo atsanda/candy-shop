@@ -2,6 +2,7 @@ import os
 from os.path import join
 from distutils.util import strtobool
 from configurations import Configuration
+import dj_database_url
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -39,6 +40,13 @@ class Common(Configuration):
     ADMINS = (
         ('Author', 'tsanda.artyom@gmail.com'),
     )
+
+    DATABASES = {
+        'default': dj_database_url.config(
+                default='postgres://postgres:postgres@localhost:5432/candy_shop',
+                conn_max_age=int(os.getenv('POSTGRES_CONN_MAX_AGE', 600))
+        )
+    }
 
     # General
     APPEND_SLASH = False
