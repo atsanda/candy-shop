@@ -2,11 +2,11 @@
 
 [![codecov](https://codecov.io/gh/atsanda/candy-shop/branch/main/graph/badge.svg?token=YYQ675YF3V)](https://codecov.io/gh/atsanda/candy-shop)
 
-This is a small REST servise written with [Django REST framework](https://www.django-rest-framework.org/) for managing couriers and orders for a candy shop. It is a part of selection process to [Yandex Backend School](https://yandex.ru/promo/academy/backend-school).
+This is a small REST service written with [Django REST framework](https://www.django-rest-framework.org/) for managing couriers and orders for a candy shop. It is a part of selection process to [Yandex Backend School](https://yandex.ru/promo/academy/backend-school).
 
 ## Structure
 
-The app implements several apis:
+The app implements several APIs:
 ```
 [POST] /couriers
 [GET] /couriers/{courier_id}
@@ -19,7 +19,7 @@ There are several core files for processing each of them:
 * a request is recieved inside [views](candy_shop/apps/delivery/views.py),
 * then deserialized and validated inside [serializers](candy_shop/apps/delivery/serializers.py), 
 * business logic is applied from [services](candy_shop/apps/delivery/services.py),
-* comlex queries are added moved to [models](candy_shop/apps/delivery/models.py).
+* complex queries are moved to [models](candy_shop/apps/delivery/models.py).
 
 ## Installation
 To install the app for development
@@ -38,14 +38,14 @@ $ pip install -r requirements.txt
 DJANGO_SETTINGS_MODULE=candy_shop.config
 DJANGO_CONFIGURATION=Local
 ```
-* run test to check your installation
+* run tests to check your installation
 ```.bash
 $ pytest
 ```
 
 ## Deployment
 
-The app was deployed to corresponding virtual machine, which was given to all entrants. My settings for deployment were taken from [this video](https://youtu.be/FLiKTJqyyvs). The video offers to deploy through gunicorn, nginx and supervisor, which I did.
+The app was deployed to the corresponding virtual machine, which was given to all entrants. My setup for deployment were taken from [this video](https://youtu.be/FLiKTJqyyvs). The video offers to deploy through gunicorn, nginx and supervisor, which I did.
 
 ## Tests
 
